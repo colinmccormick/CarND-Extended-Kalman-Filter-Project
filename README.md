@@ -1,5 +1,6 @@
 # Extended Kalman Filter Project
-Self-Driving Car Engineer Nanodegree Program
+Udacity Self-Driving Car Engineer Nanodegree Program: Term 2
+[Master project repo](https://github.com/udacity/CarND-Extended-Kalman-Filter-Project)
 
 This project implements a [Kalman filter ](https://en.wikipedia.org/wiki/Kalman_filter) that uses lidar and radar measurements to track a moving vehicle. Because two types of sensor measurements are used, it is an example of [sensor fusion](https://en.wikipedia.org/wiki/Sensor_fusion). Since one of the sensors (radar) involves a nonlinear update process, we use an Extended Kalman Filter in that case. This project uses the Term 2 Simulator which can be downloaded [here](https://github.com/udacity/self-driving-car-sim/releases).
 
@@ -33,11 +34,8 @@ Implementing several parts of FusionEKF.cpp was more challenging. Conceptually, 
 
 One point of confusion is the apparent redundancy of the measurement projection matrix H. This is supposed to project the value of the estimated state (in phase space) into the measurement space. This is a constant for lidar, and depends on the state x for radar. It's not clear why FusionEKF has a data member Hj that is simply overwritten and then copied to the ekf_.H_ data member - this seems unnecessary.
 
-The biggest problem I encountered was handling the range clipping of the polar angle variable theta in the extended Kalman filter (KalmanFilter::UpdateEKF). I manually convert the Cartesian coordinates of the predicted state into polar, and then (per suggestions from the assignment) test whether the atan2() function led to a value outside of the range [-pi,pi]. When I first tried this using the math.h constant M_PI, there was never a theta value that exceeded this range, but there was clearly a failure of the filter about half way through the simulated measurement data when the update veered wildly off track. Many other students reported similar behavior on Slack, but I couldn't fix it using this range fix.
-
-Instead, I shrank the test range for theta by a fudge factor (PI_SCALING_FACTOR), and found this fixed the problem (for a value of 0.995). This may be the result of a numeric error, although I don't understand where it's occurring. Three points are flagged as out of range and fixed by adding/subtracting 2pi. 
+The only somewhat tricky issue I encountered was handling the polar angle variable in the extended Kalman filter (KalmanFilter::UpdateEKF). I manually convert the Cartesian coordinates of the predicted state into polar, and then calculate the difference between the predicted state and the measured state. Per suggestions, I then test whether the difference in polar angle falls outside the range [-pi,pi]. If so, I adjust by multiples of 2 pi until it it within range. Once this is implemented correctly the algorithm can handle all the sensor measurement data without any issues.
 
 ## Results
 
-My filter achieves RMSE of [0.0973,0.0855,0.4513,0.4399] for [px,py,vx,vy], well within the project rubric requirements. It also meets the rubric requirements for Dataset 2, without any theta values being clipped/adjusted.
-
+My filter achieves RMSE of [0.0973,0.0855,0.4513,0.4399] for [px,py,vx,vy], well within the project rubric requirements. It also meets the rubric requirements for Dataset 2.

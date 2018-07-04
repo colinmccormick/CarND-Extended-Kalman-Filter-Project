@@ -4,7 +4,6 @@
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
-using namespace std;
 
 // Please note that the Eigen library does not initialize 
 // VectorXd or MatrixXd objects with zeros upon creation.
@@ -24,9 +23,8 @@ void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
 }
 
 void KalmanFilter::Predict() {
-  /**
-  TODO:
-    * predict the state
+  /*
+  Predict the state
   */
 
   x_ = F_ * x_;
@@ -36,19 +34,20 @@ void KalmanFilter::Predict() {
 }
 
 void KalmanFilter::Update(const VectorXd &z) {
-  /**
-  TODO:
-    * update the state by using Kalman Filter equations
+  /*
+  Update the state by using Kalman Filter equations
   */
 
+  // use kalman filter equations
   VectorXd z_pred = H_ * x_;
   VectorXd y = z - z_pred;
   MatrixXd Ht = H_.transpose();
-  MatrixXd S = H_ * P_ * Ht + R_;
-  MatrixXd Si = S.inverse();
   MatrixXd PHt = P_ * Ht;
+  MatrixXd S = H_ * PHt + R_;
+  MatrixXd Si = S.inverse();
   MatrixXd K = PHt * Si;  // kalman filter gain
 
+  // update state
   x_ = x_ + (K * y);
   long x_size = x_.size();
   MatrixXd I = MatrixXd::Identity(x_size,x_size);
@@ -57,9 +56,8 @@ void KalmanFilter::Update(const VectorXd &z) {
 }
 
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
-  /**
-  TODO:
-    * update the state by using Extended Kalman Filter equations
+  /*
+  Update the state by using Extended Kalman Filter equations
   */
 
   float px = x_(0);
@@ -70,35 +68,34 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   float theta = atan2(py, px);
   float rhodot = (px*vx + py*vy)/rho;
 
-  // ensure that theta is in the correct range (-pi to +pi)
-  // range testing fails unless we scale down by a fudge factor
-  float PI_SCALING_FACTOR = 0.995;
-
-  if (theta > PI_SCALING_FACTOR * M_PI) {
-    std::cout << "Theta out of range: " << theta << "; subtracted 2*PI" << std::endl;
-    theta -= 2 * M_PI;
-  } 
-  if (theta < -PI_SCALING_FACTOR * M_PI) {
-    std::cout << "Theta out of range: " << theta << "; added 2*PI" << std::endl;
-    theta += 2 * M_PI;
-  }
-
-  // check for no divide by zero (point too close to the origin)
-  if (fabs(rho) < 0.0001) {
-    std::cout << "Error: Divide by zero in EKF" << std::endl;
+  // check if point is close to origin 
+  const float CLOSE_TO_ORIGIN = 0.01;
+  if ( (fabs(px) < CLOSE_TO_ORIGIN) && (fabs(py) < CLOSE_TO_ORIGIN)) {
+    theta = 0;
     rhodot = 0;
-  };
+  }
   
   // use extended Kalman filter equations
   VectorXd z_pred(3);
   z_pred << rho, theta, rhodot;
   VectorXd y = z - z_pred;
+
+  // fix angle difference if it's out of range (-pi,pi)
+  while (y(1) > M_PI) {
+    y(1) -= 2*M_PI;
+  }
+  while (y(1) < -M_PI) {
+    y(1) += 2*M_PI;
+  }
+  
+  // continue extended Kalman filter equations
   MatrixXd Ht = H_.transpose();
-  MatrixXd S = H_ * P_ * Ht + R_;
-  MatrixXd Si = S.inverse();
   MatrixXd PHt = P_ * Ht;
+  MatrixXd S = H_ * PHt + R_;
+  MatrixXd Si = S.inverse();
   MatrixXd K = PHt * Si; // kalman filter gain
 
+  // update state
   x_ = x_ + (K * y);
   long x_size = x_.size();
   MatrixXd I = MatrixXd::Identity(x_size,x_size);
